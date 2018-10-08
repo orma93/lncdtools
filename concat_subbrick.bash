@@ -17,19 +17,30 @@ prefix="$1"; shift
 glob="$1"; shift
 [ $# -ne 0 ] && subbrik="$1" || subbrik=0
 
-[ -z "$(ls $patt)" ] && echo "bad pattern provided ($patt). consider .HEAD?" >&2 && exit 1
+[ -z "$(ls $glob)" ] && echo "bad glob provided ($glob). consider .HEAD?" >&2 && exit 1
 
-ids="$(ls $patt | perl -lne 'print $& if m/\d{5}_\d{8}/')"
-[ -z "$ids" ] && echo "could not find lunaid_date in provided pattern" >&2 && exit 1
+ids="$(ls $glob | perl -lne 'print $& if m/\d{5}_\d{8}/')"
+[ -z "$ids" ] && echo "could not find lunaid_date in provided glob" >&2 && exit 1
 
-if [ -r "$prefix" ]; then
+if [ ! -r "$prefix" ]; then
    echo "3dbucket: combine"
-   3dbucket -prefix "$prefix" $(ls $patt | sed "s/$/[$subrick]/")
+   3dbucket -prefix "$prefix" $(ls $glob | sed "s/$/[$subbrik]/")
    echo "3drefit: relabel"
    3drefit -relabel_all_str "$ids" "$prefix"
 else 
    echo "rm $prefix # to regenerate; skipping 3dbucket and 3drefit"
 fi
 
-afni "$prefix" -com 'OPEN axialgraph'
+afni -com 'OPEN_WINDOW axialgraph' "$prefix" 
+
+outidx=$(3dROIstats -quiet  -mask "3dcalc( -expr step(a) -a $prefix[0] )"  $prefix |
+         Rscript -e '
+           d<-read.table("stdin");
+           cat(paste(sep=",",collapse=",",
+                which( abs(d$V1) > abs(mean(d$V1))+2*sd(d$V1) )-1 
+               ))')
+echo "outlier idxes: $outidx"
+echo "labels: "
+3dinfo -label all_sub7.nii.gz[$outidx]
+
 
