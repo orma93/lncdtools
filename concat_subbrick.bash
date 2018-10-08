@@ -11,7 +11,9 @@ trap 'e=$?; [ $e -ne 0 ] && echo "$0 exited in error"' EXIT
 #   2) a glob. eg /Volumes/Zeus/preproc/pet_frog/MHTask_pet/*/contrasts/Frogger/hashContrasts_FM_GAM_stats2+tlrc.HEAD
 #   3) [optional] sub brick (0 if not provided)
 
-[ $# -lt 2 ] && echo "USAGE: $0 prefix 'gl*ob' [subbrik]" >&2 && exit 1
+[ $# -lt 2 ] && 
+  echo -e "look at a single brick accross subjects\nUSAGE: $0 output.nii.gz 'gl*ob' [subbrik]" >&2 &&
+  exit 1
 
 prefix="$1"; shift
 glob="$1"; shift
@@ -31,16 +33,13 @@ else
    echo "rm $prefix # to regenerate; skipping 3dbucket and 3drefit"
 fi
 
-afni -com 'OPEN_WINDOW axialgraph' "$prefix" 
+afni -com 'OPEN_WINDOW axialgraph' "$prefix"  >/dev/null 2>&1
 
 outidx=$(3dROIstats -quiet  -mask "3dcalc( -expr step(a) -a $prefix[0] )"  $prefix |
-         Rscript -e '
-           d<-read.table("stdin");
-           cat(paste(sep=",",collapse=",",
-                which( abs(d$V1) > abs(mean(d$V1))+2*sd(d$V1) )-1 
-               ))')
-echo "outlier idxes: $outidx"
-echo "labels: "
-3dinfo -label all_sub7.nii.gz[$outidx]
-
+         Rscript -e 'd<-read.table("stdin");cat(paste(sep=",",collapse=",",which( abs(d$V1) > abs(mean(d$V1))+2*sd(d$V1) )-1))')
+if [ -n "$outidx" ]; then
+   echo "outlier idxes: $outidx"
+   echo -n "outlier labels: "
+   3dinfo -label all_sub7.nii.gz[$outidx]
+fi
 
