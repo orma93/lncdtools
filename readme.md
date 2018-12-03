@@ -4,7 +4,7 @@ small scripts useful for data wrangling at the LNCD
 ## Install
 ```
 git clone https://github.com/LabNeuroCogDevel/lncdtools ~/lncdtools
-echo "export PATH=\$PATH:$HOME/lncdtools" >> $( [ "$(uname)" == Darwin ] && echo ~/ex_.profile || echo ~/ex_.bashrc)
+echo "export PATH=\$PATH:$HOME/lncdtools" >> $( [ "$(uname)" == Darwin ] && echo ~/.profile || echo ~/.bashrc)
 ```
 
 ## Tools
