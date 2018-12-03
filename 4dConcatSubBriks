@@ -5,6 +5,8 @@ trap 'e=$?; [ $e -ne 0 ] && echo "$0 exited in error"' EXIT
 # wrap around 3dbucket and 3drefit
 # extract a subbrick from a list of nifti 
 # label with luna ids
+#
+# Useful for quality checking many structurals, subject masks,  or individual contrasts
 
 # input:
 #   1) prefix
