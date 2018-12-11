@@ -9,22 +9,31 @@ set -euo pipefail
 #
 _img_bg_rm(){
    [ $# -lt 2 -o $# -gt 3  ] && 
-       echo "USAGE: $0 input.png output.png [-simple]" >&2 && return 1
+       echo "USAGE: $0 input.png output.png [-simple]; use '-x' as output to autoname" >&2 && return 1
    [ ! -r "$1" ] && 
        echo "input image $1 does not exist" >&2 && return 1
+
+   # if you want to use the inputname as output
+   local in="$1"
+   local out="$2"
+   if [ "$2" == "-x" ]; then
+      local in_name=$(basename $in) # remove path
+      in_name=${in_name%.*} # remove ext
+      out=$(dirname $in)/${in_name}_alpha.png
+   fi
 
    # use simple and low fuzz (BTC derived 8% for afni exported images)
    # or complicated w/ nice smoothing and no within-shell alpha
    if [ $# -eq 3 ] && [ "$3" == "-simple" ]; then
-      convert ${1} -fuzz 8% -transparent black ${2}
+      convert ${in} -fuzz 8% -transparent black ${out}
    else
       # https://stackoverflow.com/questions/9155377/set-transparent-background-using-imagemagick-and-commandline-prompt
-      local color=$( convert "$1" -format "%[pixel:p{0,0}]" info:- )
-      convert "$1" -alpha off -bordercolor $color -border 1 \
+      local color=$( convert "$in" -format "%[pixel:p{0,0}]" info:- )
+      convert "$in" -alpha off -bordercolor $color -border 1 \
          \( +clone -fuzz 30% -fill none -floodfill +0+0 $color \
          -alpha extract -geometry 200% -blur 0x0.5 \
          -morphology erode square:1 -geometry 50% \) \
-         -compose CopyOpacity -composite -shave 1 "$2"
+         -compose CopyOpacity -composite -shave 1 "$out"
    fi
 }
 
