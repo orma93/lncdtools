@@ -8,8 +8,16 @@ set -euo pipefail
 # will overwrite output image 
 #
 _img_bg_rm(){
-   [ $# -lt 2 -o $# -gt 3  ] && 
-       echo "USAGE: $0 input.png output.png [-simple]; use '-x' as output to autoname" >&2 && return 1
+   if [ $# -lt 2 ]; then
+       cat  >&2 <<HEREDOC 
+USAGE: $0 input.png output.png [-simple] [-white2red]; use '-x' as output to autoname" 
+  $0 input.ppm -x         # makes input_alpha.png
+  $0 input.ppm out.png    # makes out.png
+  $0 input.png -x -simple # usues 8% fuzz, does not remove inner black
+  $0 mask.png -x -simple -white2red # changes white to red
+HEREDOC
+       return 1
+   fi
    [ ! -r "$1" ] && 
        echo "input image $1 does not exist" >&2 && return 1
 
@@ -21,19 +29,33 @@ _img_bg_rm(){
       in_name=${in_name%.*} # remove ext
       out=$(dirname $in)/${in_name}_alpha.png
    fi
+   extraCmd=""
+   simpleFuzz=8
+   #change white to red
+   if [ $# -ge 3 ] && [[ "$@" =~ -white2red ]]; then
+      simpleFuzz=13
+      extraCmd="-fuzz 100% -fill red -opaque white"
+   fi
+ 
 
    # use simple and low fuzz (BTC derived 8% for afni exported images)
    # or complicated w/ nice smoothing and no within-shell alpha
-   if [ $# -eq 3 ] && [ "$3" == "-simple" ]; then
-      convert ${in} -fuzz 8% -transparent black ${out}
+   if [ $# -ge 3 ] && [[ "$@" =~ -simple ]]; then
+      convert ${in} \
+         -fuzz $simpleFuzz% -transparent black \
+         $extraCmd \
+         ${out}
    else
       # https://stackoverflow.com/questions/9155377/set-transparent-background-using-imagemagick-and-commandline-prompt
       local color=$( convert "$in" -format "%[pixel:p{0,0}]" info:- )
-      convert "$in" -alpha off -bordercolor $color -border 1 \
+     convert "$in"\
+         -alpha off -bordercolor $color -border 1 \
          \( +clone -fuzz 30% -fill none -floodfill +0+0 $color \
          -alpha extract -geometry 200% -blur 0x0.5 \
          -morphology erode square:1 -geometry 50% \) \
-         -compose CopyOpacity -composite -shave 1 "$out"
+         -compose CopyOpacity -composite -shave 1 \
+         $extraCmd \
+         "$out"
    fi
 }
 
