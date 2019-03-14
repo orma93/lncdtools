@@ -10,11 +10,12 @@ set -euo pipefail
 _img_bg_rm(){
    if [ $# -lt 2 ]; then
        cat  >&2 <<HEREDOC 
-USAGE: $0 input.png output.png [-simple] [-white2red]; use '-x' as output to autoname" 
+USAGE: $0 input.png output.png [-simple] [-white2red] [-bg=black] [-fuzz=8]; use '-x' as output to autoname" 
   $0 input.ppm -x         # makes input_alpha.png
   $0 input.ppm out.png    # makes out.png
   $0 input.png -x -simple # usues 8% fuzz, does not remove inner black
   $0 mask.png -x -simple -white2red # changes white to red
+  $0 mask.png -x -simple -bg=white # make white the alpha color
 HEREDOC
        return 1
    fi
@@ -36,19 +37,45 @@ HEREDOC
       simpleFuzz=13
       extraCmd="-fuzz 100% -fill red -opaque white"
    fi
+
+   # set color
+   bgcolor="black"
+   if [ $# -ge 3 ] && [[ "$@" =~ -bg=([^ ]+) ]]; then
+      bgcolor=${BASH_REMATCH[1]}
+   fi
+   # fuzz, default to 8, 13 if white2red
+   if [ $# -ge 3 ] && [[ "$@" =~ -fuzz=([^ ]+) ]]; then
+      simpleFuzz=${BASH_REMATCH[1]}
+   fi
  
+   #echo "settings: fuzz=$simpleFuzz extra=$extraCmd bg=$bgcolor"
 
    # use simple and low fuzz (BTC derived 8% for afni exported images)
    # or complicated w/ nice smoothing and no within-shell alpha
    if [ $# -ge 3 ] && [[ "$@" =~ -simple ]]; then
       convert ${in} \
-         -fuzz $simpleFuzz% -transparent black \
+         -fuzz $simpleFuzz% -transparent $bgcolor \
          $extraCmd \
          ${out}
    else
       # https://stackoverflow.com/questions/9155377/set-transparent-background-using-imagemagick-and-commandline-prompt
       local color=$( convert "$in" -format "%[pixel:p{0,0}]" info:- )
-     convert "$in"\
+      [ -z "$color" ] && echo "$in top pixel is no color!" >&2 && return 1
+
+      # check size of input
+      if ! identify "$in" | awk -F'[ x]' '($3*$4 > 1000^2){exit(1)}'; then
+         echo "WARNING:  image is kind of big. convert may take a while!" >&2
+         identify $in |sed 's/^/  /' >&2
+         echo "consider: " >&2
+         echo "  $(basename $0) $in $out -simple" >&2
+         echo " OR " >&2
+         echo "  convert '$in' -scale 50% ${in_name}_small.png" >&2
+         echo "  $(basename $0) ${in_name}_small.png ${@:2}" >&2
+         echo >&2
+      fi 
+
+      set -x
+      convert "$in"\
          -alpha off -bordercolor $color -border 1 \
          \( +clone -fuzz 30% -fill none -floodfill +0+0 $color \
          -alpha extract -geometry 200% -blur 0x0.5 \
@@ -56,6 +83,7 @@ HEREDOC
          -compose CopyOpacity -composite -shave 1 \
          $extraCmd \
          "$out"
+      set +x
    fi
 }
 
