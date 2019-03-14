@@ -67,7 +67,7 @@ HEREDOC
          echo "WARNING:  image is kind of big. convert may take a while!" >&2
          identify $in |sed 's/^/  /' >&2
          echo "consider: " >&2
-         echo "  $(basename $0) $in $out -simple" >&2
+         echo "  $(basename $0) $in $out -simple -bg=$color -fuzz=30" >&2
          echo " OR " >&2
          echo "  convert '$in' -scale 50% ${in_name}_small.png" >&2
          echo "  $(basename $0) ${in_name}_small.png ${@:2}" >&2
