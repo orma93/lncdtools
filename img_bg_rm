@@ -10,9 +10,10 @@ set -euo pipefail
 _img_bg_rm(){
    if [ $# -lt 2 ]; then
        cat  >&2 <<HEREDOC 
-USAGE: $0 input.png output.png [-simple] [-white2red] [-bg=black] [-fuzz=8]; use '-x' as output to autoname" 
+USAGE: $0 input.png output.png [-simple] [-white2red] [-bg=black] [-fuzz=8] [-palette]; use '-x' as output to autoname" 
   $0 input.ppm -x         # makes input_alpha.png
   $0 input.ppm out.png    # makes out.png
+  $0 mask.png -x -palette # smaller file size w/pngnq to reduce color pallete 
   $0 input.png -x -simple # usues 8% fuzz, does not remove inner black
   $0 mask.png -x -simple -white2red # changes white to red
   $0 mask.png -x -simple -bg=white # make white the alpha color
@@ -25,9 +26,12 @@ HEREDOC
    # if you want to use the inputname as output
    local in="$1"
    local out="$2"
+
+   # use for creating out if '-x' and for warning message
+   local in_name=$(basename $in) # remove path
+   in_name=${in_name%.*} # remove ext
+
    if [ "$2" == "-x" ]; then
-      local in_name=$(basename $in) # remove path
-      in_name=${in_name%.*} # remove ext
       out=$(dirname $in)/${in_name}_alpha.png
    fi
    extraCmd=""
@@ -84,6 +88,12 @@ HEREDOC
          $extraCmd \
          "$out"
       set +x
+   fi
+
+   if [ $# -ge 3 ] && [[ "$@" =~ -palette ]]; then
+      ! [[ $out =~ (.*).png$ ]] && echo "palette only works for png!" >&2 && return
+      pngnq $out
+      mv ${BASH_REMATCH[1]}-nq8.png $out
    fi
 }
 
