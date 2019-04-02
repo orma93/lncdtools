@@ -1,0 +1,9 @@
+#!/usr/bin/env perl
+use strict; use warnings;
+
+# curl "https://raw.githubusercontent.com/ThomasYeoLab/CBIG/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/MNI/Schaefer2018_1000Parcels_17Networks_order.lut" | fsllut_to_afni
+print "Spectrum:lut_from_freeview\n";
+while(<>){
+ next unless my @m = /color\{([0-9.]+),([0-9.]+),([0-9.]+)\}/;
+ print "#", map({sprintf("%02x",$_*255) }  @m), "\n";
+}
