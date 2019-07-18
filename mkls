@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# 
+# generate a list and diff against self
+# useful inside Makefile where script creates a bunch of files
+# and we only need to run the next step if there are new file names
+# for example, this Makefile only runs step2 if we haven't run `make` today
+#     init.log:
+#       touch txt/$`date +%F`
+#       mkls init.log 'txt/*'
+#     step2.log: init.log
+#       echo hi > txt/`date +%F`
+#       mkls step2.log
+# LOG:
+#  20190718 - init
+
+[[ $# -lt 1 ]] && echo "USAGE: $0 dirlist.txt '/list/*/files'\n find -iname '*thing*' | $0 dirlist.txt" && exit 1
+# temporary file for diffing
+TMPFILE=$(mktemp /tmp/XXXXX-$(basename $0).lst)
+# file to compare outputs to == ls log file
+CMPFILE="$1"; shift
+
+# write list to TMPFILE - either have a pattern to ls or piping from e.g. find
+[ $# -ge 1 ] && ls -d $@ > $TMPFILE || cat > $TMPFILE
+# overwrite log file if list is different
+! diff -q $TMPFILE $CMPFILE 2>/dev/null && cp $TMPFILE $CMPFILE || echo "$CMPFILE has not changed"
