@@ -41,6 +41,19 @@ def sheet_api(conf_file):
     return(sheet)
 
 
+def first_sheet_id(sheet, ws_id, want_title=None):
+    """get the first sheet id
+    or if want_title is specified, get the id matching that title"""
+    sheet_metadata = sheet.spreadsheets().get(spreadsheetId=ws_id).execute()
+    sheets = sheet_metadata.get('sheets', '')
+    for s in sheets:
+        title = s.get("properties", {}).get("title", "Sheet1")
+        if want_title is None or title == want_title:
+            sheet_id = s.get("properties", {}).get("sheetId", 0)
+            return(sheet_id)
+    return(None)
+
+
 def set_header(sheet_id=0):
     """set first row to bold and froozen"""
     reqs = {'requests': [
@@ -91,8 +104,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Work on google sheets")
     parser.add_argument('--worksheetid', '-w', dest='ws_id',
                         help="worksheet id (XXXX in spreadsheets/d/XXXX)")
-    parser.add_argument('--sheetid', '-s', dest='sheet_id', default=0,
+    parser.add_argument('--sheetid', '-s', dest='sheet_id', default=None,
                         help="sheet id (YYYY in spreadsheets/d/...?guid=YYYY)")
+    parser.add_argument('--sheettitle', '-t', dest='sheet_title', default=None,
+                        help="sheet title (used to find sheet id)")
     parser.add_argument('-a', '--action',
                         dest='actions', nargs='+', action='append',
                         help="action to preform." + "\n\t*".join([
@@ -109,6 +124,13 @@ if __name__ == "__main__":
     sdir = os.path.dirname(os.path.realpath(__file__))
     conf_file = os.path.join(sdir, 'sheet.ini')
     sheet = sheet_api(conf_file)
+
+    # find sheet id if not provided
+    # won't always know sheet id. e.g. changes if
+    #  we upload a new 'status.csv' using googledrive::drive_update in R
+    if args.sheet_id is None:
+        args.sheet_id = first_sheet_id(sheet, args.ws_id, args.sheet_title)
+        print("sheet id: %d" % args.sheet_id)
 
     # preform actions
     if 'header' in [x[0] for x in args.actions]:
