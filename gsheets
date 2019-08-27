@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# sheet api call outlined in
+# http://wescpy.blogspot.com/2016/09/formatting-cells-in-google-sheets-with.html
+
+from googleapiclient.discovery import build
+from oauth2client.service_account import ServiceAccountCredentials
+import httplib2
+import os.path
+
+
+def get_service(api_name, api_version, scope, key_file_location,
+                service_account_email):
+    """
+    convient way to setup google apis access in python
+    using service account key file
+    code taken from LNCDcal
+    """
+    credentials = ServiceAccountCredentials.from_p12_keyfile(
+        service_account_email, key_file_location, scopes=scope)
+    # UPMC MItM's our SSL connection: disable_ssl_certificate_validation=True
+    # todo: add as config switch
+    http = credentials.authorize(httplib2.Http(
+        disable_ssl_certificate_validation=True))
+    # Build the service object.
+    service = build(api_name, api_version, http=http)
+    return service
+
+
+def sheet_api(conf_file):
+    import configparser
+    if not os.path.isfile(conf_file):
+        raise Exception('DNE: sheet.ini; need [Sheets] p12= and email=')
+    config = configparser.RawConfigParser()
+    config.read(conf_file)
+    key = config.get('Sheets', 'p12')
+    email = config.get('Sheets', 'email')
+
+    scope = ['https://www.googleapis.com/auth/spreadsheets']
+    sheet = get_service('sheets', 'v4', scope, key, email)
+    return(sheet)
+
+
+def set_header(sheet_id=0):
+    """set first row to bold and froozen"""
+    reqs = {'requests': [
+        {'updateSheetProperties': {
+            'properties': {
+                'gridProperties': {'frozenRowCount': 1},
+                'sheetId': sheet_id},
+            'fields': 'gridProperties.frozenRowCount',
+            }},
+        {'repeatCell': {
+            'range': {
+                'sheetId': sheet_id,
+                'startColumnIndex': 0,
+                'endColumnIndex': 99,
+                'startRowIndex': 0,
+                'endRowIndex': 1
+                },
+            'cell': {'userEnteredFormat': {'textFormat': {'bold': True}}},
+            'fields': 'userEnteredFormat.textFormat.bold',
+            }}
+        ]}
+    return(reqs)
+
+
+def mkreq(sheets, ws_id, reqs):
+    sheets.spreadsheets().\
+        batchUpdate(spreadsheetId=ws_id, body=reqs).\
+        execute()
+
+
+def set_filter(sheet_id):
+    """how to filter data; not used.
+    creates filter. we probably want to apply directly to data"""
+    req = {'requests': [
+           {'addFilterView': {
+             'filter': {
+                  'title': 'FindMissing',
+                  'range': {'sheetId': sheet_id},
+                  'sortSpecs': [
+                      {'dimensionIndex': 0, 'sortOrder': 'ASCENDING'},
+                      {'dimensionIndex': 12, 'sortOrder': 'DESCENDING'}]}}}]}
+    return(req)
+
+
+if __name__ == "__main__":
+    import sys
+    import argparse
+    parser = argparse.ArgumentParser(description="Work on google sheets")
+    parser.add_argument('--worksheetid', '-w', dest='ws_id',
+                        help="worksheet id (XXXX in spreadsheets/d/XXXX)")
+    parser.add_argument('--sheetid', '-s', dest='sheet_id', default=0,
+                        help="sheet id (YYYY in spreadsheets/d/...?guid=YYYY)")
+    parser.add_argument('-a', '--action',
+                        dest='actions', nargs='+', action='append',
+                        help="action to preform." + "\n\t*".join([
+                             "'header' to freeze and bold first row"]))
+    args = parser.parse_args()
+
+    if args.actions is None:
+        parser.print_help()
+        print("NO ACTION GIVEN")
+        sys.exit()
+
+    # config file stores p12 key location and service email
+    # outside so code can be commited and shared
+    sdir = os.path.dirname(os.path.realpath(__file__))
+    conf_file = os.path.join(sdir, 'sheet.ini')
+    sheet = sheet_api(conf_file)
+
+    # preform actions
+    if 'header' in [x[0] for x in args.actions]:
+        print('freezing and bolding first row')
+        mkreq(sheet, args.ws_id, set_header(args.sheet_id))
