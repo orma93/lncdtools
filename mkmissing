@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+find patterns that did not make it from one step to the next in a pipeline
+"""
+import re
+from glob import glob
+import argparse
+
+
+def patt_in_wildcard(patt, wildcard):
+    """extract matches from glob"""
+    ext = [patt.search(x) for x in glob(wildcard)]
+    ext = [m.group(0) for m in ext if m is not None]
+    # set: sort and uniq
+    return set(ext)
+
+
+parser = argparse.ArgumentParser(description="match pattern between globs")
+parser.add_argument('-1', '--inglob', dest='in_glob', required=True,
+                    help="input file wildcard")
+parser.add_argument('-2', '--outglob', dest='out_glob', required=True,
+                    help="step 2 file wildcard")
+parser.add_argument('-p', '--pattern', dest='patt',
+                    help="pattern to match in file names",
+                    default="\d{5}_\d{8}")
+parser.add_argument('-v', '--verbose', action="store_true")
+parser.add_argument('-o', '--saveto', dest='saveto',
+                    help="file to write if any differences",
+                    default=None)
+parser.add_argument('-e', '--save_empty', action='store_true',
+                    help="save file even if there is no difference " +
+                    "(default false useful within `make`'s timestamp compare",
+                    default=None)
+args = parser.parse_args()
+
+p = re.compile(args.patt)
+
+# within 'in' set but missing from 'out' set
+# order matters: set([1,2,3]) - set([1,2,4]) = {3}
+inset = patt_in_wildcard(p, args.in_glob)
+outset = patt_in_wildcard(p, args.out_glob)
+missing = inset - outset
+
+# when debuging pattern, it's useful to see the matches
+if args.verbose:
+    print(args.in_glob)
+    print(inset)
+    print(args.out_glob)
+    print(outset)
+
+outstr = "\n".join(missing)
+# dont write to file if none provided
+# and only write empty missing to file if save_empty is set
+if args.saveto is None:
+    print(outstr)
+elif args.save_empty or missing:
+    with open(args.saveto, 'w') as f:
+        f.write(outstr + "\n")
