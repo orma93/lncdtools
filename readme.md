@@ -13,6 +13,7 @@ echo "export PATH=\$PATH:$HOME/lncdtools" >> $( [ "$(uname)" == Darwin ] && echo
   * `img_bg_rm`  - use imagemagick's `convert` to set a background to alpha (remove). Taken from ["hackerb9" stack overflow solution](https://stackoverflow.com/questions/9155377/set-transparent-background-using-imagemagick-and-commandline-prompt)
   * `mkls` - make file list logs for Makefile checks
   * `mkmissing` - find missing patterns between two steps in a pipeline (file globs)
+  * `rio2` - read dataframe from stdin and run R code with shortcuts and magic a la DataScienceToolkit's Rio
 
 ## Notes
 
