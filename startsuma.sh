@@ -9,7 +9,7 @@ for f in  specFile t1image23 t1image; do
  [ ! -r "${!f}" ]  && echo "missing $f: ${!f}! copy from /opt/ni_tools/standard_templates/" >&2 && exit 1
 done
 
-afni -niml -yesplugouts -com "SET_UNDERLAY $t1image" -dset $t1image $t1image23 &
+afni -niml -yesplugouts -com "SET_UNDERLAY $t1image" -dset $t1image $t1image23 $@ &
 suma -niml -spec $specFile -sv $t1image &
 sleep 30
 
