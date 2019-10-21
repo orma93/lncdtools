@@ -84,6 +84,31 @@ def mkreq(sheets, ws_id, reqs):
         execute()
 
 
+def upload_req(sheet_id, fname, delimiter=None):
+    """craete pasteData request"""
+
+    if delimiter is None:
+        if '.csv' in fname:
+            delimiter = ","
+        else:
+            delimiter = "\t"
+
+    with open(fname, 'r') as f:
+        csv_content = f.read()
+    req = {'requests': [{
+        'pasteData': {
+            'coordinate': {
+                'sheetId': sheet_id,
+                'rowIndex': 0,
+                'columnIndex': 0
+                },
+            "data": csv_content,
+            "type": "PASTE_NORMAL",
+            "delimiter": delimiter}
+        }]}
+    return(req)
+   
+
 def set_filter(sheet_id):
     """how to filter data; not used.
     creates filter. we probably want to apply directly to data"""
@@ -111,6 +136,7 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--action',
                         dest='actions', nargs='+', action='append',
                         help="action to preform." + "\n\t*".join([
+                             "'upload file.csv' pastes file.csv into sheet",
                              "'header' to freeze and bold first row"]))
     args = parser.parse_args()
 
@@ -132,7 +158,15 @@ if __name__ == "__main__":
         args.sheet_id = first_sheet_id(sheet, args.ws_id, args.sheet_title)
         print("sheet id: %d" % args.sheet_id)
 
-    # preform actions
+    # ## preform actions
+
+    # upload file (via pasting)
+    upload = [x[1] for x in args.actions if 'upload' in x[0]]
+    if upload:
+        print('uploading %s' % upload[0])
+        mkreq(sheet, args.ws_id, upload_req(args.sheet_id, upload[0]))
+
+    # set header
     if 'header' in [x[0] for x in args.actions]:
         print('freezing and bolding first row')
         mkreq(sheet, args.ws_id, set_header(args.sheet_id))
