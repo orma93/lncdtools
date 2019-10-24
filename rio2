@@ -51,6 +51,7 @@ C<p()> implies loading C<ggplot> and will wait for X11 window to close
   p() is ggplot2 optionally using magic d
   a(),gl(),gp() are ggplot2::aes, geom_line, and geom_points
   m(), g(), s() are dplyr::mutate, group_by, and summarize
+  ac(), an() is as.character, as.numeric
   ra() (rename all) is set_colnames on magic 'd'
   r() is rename
   rt() is read.table with stdin, when run populates 'd'
@@ -86,6 +87,8 @@ l <- library;
 ld8 <- "\\d{5}_\\d{8}";
 sf <- sprintf;
 p0 <- paste0;
+an <- as.numeric;
+ac <- as.character;
 '
 LIBS="library(stringr);library(dplyr);library(tidyr);"
 
