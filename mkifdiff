@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+#
+#  replace file with stdin only if content different than file
+#  used in `make`. keep timestamps older unless there's a change
+#
+#  20191024WF  init
+
+# need a file and needs to be in a pipe
+tty >/dev/null  && echo "need to pipe to $0; cmd | $0 output.txt" && exit 1
+[ $# -ne 1 ] && echo "USAGE: cmd | $0 output.txt" && exit 1
+# temporary file for diffing
+TMPFILE=$(mktemp /tmp/XXXXX-$(basename $0).lst)
+# put pipe into a file
+cat > $TMPFILE
+# update input only if pipe output was different
+! diff -q $TMPFILE $1 2>&1 >/dev/null && cp $TMPFILE $1 || echo "$1 has not changed"

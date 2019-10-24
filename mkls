@@ -13,14 +13,17 @@ set -euo pipefail
 #       mkls step2.log
 # LOG:
 #  20190718 - init
+#  20191024 - outsource to mkifdiff
 
 [[ $# -lt 1 ]] && echo "USAGE: $0 dirlist.txt '/list/*/files'\n find -iname '*thing*' | $0 dirlist.txt" && exit 1
-# temporary file for diffing
-TMPFILE=$(mktemp /tmp/XXXXX-$(basename $0).lst)
-# file to compare outputs to == ls log file
+! command -v mkifdiff >/dev/null && echo "missing mkifdiff; cannot run $0!" && exit 1
 CMPFILE="$1"; shift
 
 # write list to TMPFILE - either have a pattern to ls or piping from e.g. find
-[ $# -ge 1 ] && ls -d $@ > $TMPFILE || cat > $TMPFILE
-# overwrite log file if list is different
-! diff -q $TMPFILE $CMPFILE 2>/dev/null && cp $TMPFILE $CMPFILE || echo "$CMPFILE has not changed"
+if [ $# -ge 1 ]; then
+   ls -d $@ | mkifdiff $CMPFILE
+else
+   echo "DEPRECATED: use mkifdiff for pipe compare" >&2
+   tty >/dev/null  && echo "need to pipe to $0; cmd | $0 $1" && exit 1
+   cat | mkifdiff $CMPFILE
+fi
