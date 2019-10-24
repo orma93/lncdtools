@@ -12,6 +12,8 @@ trap 'e=$?; [ $e -ne 0 ] && echo "$0 exited in error"' EXIT
 #   1) prefix
 #   2) a glob. eg /Volumes/Zeus/preproc/pet_frog/MHTask_pet/*/contrasts/Frogger/hashContrasts_FM_GAM_stats2+tlrc.HEAD
 #   3) [optional] sub brick (0 if not provided)
+# env
+#  NOAFNI=1 4dConcatSubBricks prefix 'glob' # NOAFNI=1 will skip opening anfi and generating outliers
 
 [ $# -lt 2 ] && 
   echo -e "look at a single brick accross subjects\nUSAGE: $0 output.nii.gz 'gl*ob' [subbrik]" >&2 &&
@@ -34,6 +36,8 @@ if [ ! -r "$prefix" ]; then
 else 
    echo "rm $prefix # to regenerate; skipping 3dbucket and 3drefit"
 fi
+
+env | grep NOAFNI && exit 0
 
 afni -com 'OPEN_WINDOW axialgraph' "$prefix"  >/dev/null 2>&1
 
