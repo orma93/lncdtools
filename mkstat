@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# 
+# like mkls but give modification date
+# N.B. stat uses the last '-c ".." ' specified
+#    mkstat log.txt -c "%s %n" *           # will give size instead of date
+#    stat -c "%s %n" * | mkifdiff  log.txt # same as above
+#
+# 20191119 - init
+
+! command -v mkifdiff >/dev/null && echo "missing mkifdiff; cannot run $0!" && exit 1
+[[ $# -le 1 ]] &&
+   echo -e "USAGE: $0 dirlist.txt '/list/*/files'
+   'modifcation_time filename' for all files (wildcard) specfied
+   can also give args that will be passed to 'stat'" &&
+   exit 1
+
+CMPFILE="$1"; shift
+
+# write list to TMPFILE - either have a pattern to ls or piping from e.g. find
+stat -c "%y %n" $@ | mkifdiff $CMPFILE
